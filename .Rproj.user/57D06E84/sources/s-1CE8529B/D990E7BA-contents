@@ -1,0 +1,245 @@
+---
+title: "Logistic Regression"
+author: "Danae Martinez"
+date: "20/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library('dplyr')
+library('tidyr')
+library('ggplot2')
+library('janitor')
+library('tibble')
+library('kableExtra')
+```
+
+## Logistic regression
+
+Logistic regression is a special case of a broader class of generalized linear 
+models, often known as GLMs. This model differs from other models of regression,
+due to the fact that the response variable is dichotomic. It produces result 
+that are typically interpreted in one of two ways:
+
+1. **Odds ratios**
+
+Odds are the ratio of the probability that something happens to the probability 
+it doesn’t happen.
+
+$$\Omega(X_i) = \frac{P(y=1|X_i)}{1-P(y=1|X_i)}$$
+
+Recall that in logistic regression 
+
+$$P(y=1|X_i) = \frac{\exp^{\beta X_i}}{1+\exp^{\beta X_i}}$$
+which means that $\Omega(X_i)$ can be written
+
+$$\Omega(X_i) =  \exp(\hat\beta X_i)$$
+
+The equation above, implies that if $\hat \beta >0 $ an increase in $X$ causes 
+an increase in the probability $P(y=1|X_i)$, while $\hat \beta < 0 $ indicates 
+that an increase in $X$ causes a decrease in $P(y=1|X_i)$, keeping the rest of 
+the variables constant.
+ 
+ 
+An odds ratio is the ratio of two odds, each calculated at a different score for 
+$X$.
+
+$$OR = \frac{\Omega(X_i)}{\Omega(X_j)}$$
+2. **Predicted probabilities**
+
+Are intuitive, but require assuming a value for every covariate.
+
+## Example of simple logistic regression 
+
+## Exploring the credit data 
+
+```{r}
+
+loan_data <- readRDS('loan_data_ch2.rds')
+
+head(loan_data) %>%   
+  kable() %>%
+  kable_styling("striped", full_width = F) 
+
+```
+
+
+```{r, echo=TRUE}
+
+set.seed(567)
+
+#create an ID
+loan_data <- loan_data %>% mutate(id = row_number())
+
+#Create training set
+training_set <- loan_data %>% sample_frac(.70)
+
+#Create test set
+test_set <- anti_join(loan_data, training_set, by = 'id')
+
+```
+
+### Basic logistic regression
+
+```{r, echo=TRUE}
+
+# fit model
+log_model <- glm(loan_status ~ age , family = binomial(link = "logit"), data = training_set)
+summary(log_model)
+
+```
+
+```{r}
+
+estimates <- round(coef(log_model), 3)
+
+coef(summary(log_model)) %>%
+  as.data.frame %>%
+  rownames_to_column("Variable") %>%
+  mutate_if(is.numeric, funs(round(.,3))) %>%
+  kable(align = c("l",rep("c",4))) %>% 
+  kable_styling("striped", full_width = F) 
+  
+```
+
+### Interpretation of coefficient
+
+Note that the mathematical model is now:
+
+$$\log (\Omega(X_i)) = \hat\beta X_i + \epsilon $$
+To interpret the coefficient in terms of the OR, let's say 
+
+$$ OR = \frac{\Omega(X_i=31)} {\Omega(X_i=30)} = \frac{\exp(-1.91-0.006*31)}{ \exp(-1.91-0.006*30)} = \exp(\beta_1)$$
+```{r, echo=TRUE}
+
+exp(estimates[1] + estimates[2]*31)/exp(estimates[1] +  estimates[2]*30)
+exp(estimates[2])
+
+```
+
+If variable age goes down by 1, the odds of getting a loan are 
+`r 1/exp(estimates[2])` bigger than the odds of not getting it. Similarly 
+
+$$ OR = \frac{\Omega(X_i=35)} {\Omega(X_i=30)} = \frac{\exp(-1.91-0.006*35)}{ \exp(-1.91-0.006*30)} = \exp(5*\beta_1)$$
+
+```{r, echo=TRUE}
+
+exp(estimates[1] + estimates[2]*35)/exp(estimates[1] +  estimates[2]*30)
+exp(5*estimates[2])
+
+```
+
+If variable age down up by 5, the odds of getting a loan are 
+`r 1/exp(5*estimates[2])` bigger than the odds of not getting it. 
+
+Remark: since $\beta_1 < 0$, then $\exp(\beta_1) < 1$ which implies that the 
+odds of getting a loan decrease as the age increases  
+
+## Interpreting as predicted probabilities
+
+```{r}
+
+predict_data <- expand.grid(age = training_set$age)
+
+pred_probs <- predict_data %>%
+  mutate(prob = predict(log_model, newdata = predict_data, 
+                              type = "response"))
+
+ggplot(pred_probs, aes(x = age, y = prob)) + geom_line() +
+  labs(x = "Age (Years)", y = "Probability getting a loan") 
+```
+
+## Models with more that one regressor 
+
+```{r, echo=TRUE}
+
+# Build the logistic regression model
+ log_model_multi = glm(loan_status ~ ir_cat + grade + annual_inc , family = "binomial", data = training_set)
+
+# Obtain significance levels using summary()
+summary(log_model_multi)
+
+```
+
+The odds of getting a loan are `r exp(1.905)` bigger for category G compared to 
+category A.
+
+Again, we have sample estimates. Getting confidence intervals for odds ratios 
+is a little more straightforward compared to predicted probabilities.
+
+To get the 95% confidence interval around the coefficients and exponentiate the 
+lower and upper boundaries in order to get the CI of the OR 
+
+```{r, echo=TRUE}
+
+confint(log_model_multi) %>%
+  exp
+
+```
+
+```{r}
+
+cis <- exp(confint(log_model_multi)) %>%
+  as.data.frame %>%
+  rownames_to_column("term") 
+
+cis
+```
+
+```{r, echo=TRUE}
+
+graph_data <- coef(summary(log_model_multi)) %>%
+  as.data.frame %>%
+  rownames_to_column("term") %>%
+  mutate_if(is.numeric, funs(round(.,3))) %>%
+  dplyr::rename(Beta = Estimate
+                , SE = `Std. Error` 
+                , statistic = `z value`) %>% 
+  mutate(OR = exp(Beta)) %>% 
+  left_join(cis) 
+
+
+```
+```{r, echo = TRUE}
+ggplot(data = graph_data, aes(x = term, y = `OR`, ymin = `2.5 %`, ymax = `97.5 %`)) +
+  geom_pointrange() +
+  geom_hline(yintercept = 1, lty = 2) +
+  coord_flip() +
+  xlab("Variable") + ylab("Odds Ratio with 95% CI") 
+```
+
+
+
+```{r}
+
+predict_data <- expand.grid( ir_cat = levels(test_set$ir_cat)
+                            , grade  = levels(test_set$grade)
+                            , annual_inc = seq(min(test_set$annual_inc), max(test_set$annual_inc),  length.out = 10))
+
+pred_probs <- predict_data %>%
+  mutate(prob = predict(log_model_multi, newdata = predict_data, type = "response"))
+
+head(pred_probs)
+
+```
+
+```{r}
+test_set <- test_set %>% 
+  mutate(prob = predict(log_model_multi, newdata = test_set, type = "response"))
+
+with(test_set, range(prob))
+
+```
+
+
+```{r, echo=TRUE}
+pred_probs %>%
+  ggplot(aes(x = annual_inc, y = prob, group = grade, color = grade)) + 
+  geom_line() +
+  facet_grid(~ ir_cat) + 
+  labs(x = "Annual income", y = "Probability of getting a loan") 
+  scale_color_discrete(name="note")
+
+```
+

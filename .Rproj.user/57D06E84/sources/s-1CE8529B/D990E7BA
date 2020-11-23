@@ -1,0 +1,25 @@
+{
+    "id": "D990E7BA",
+    "path": "~/Documents/RTrainning/LogisticRegression.Rmd",
+    "project_path": "LogisticRegression.Rmd",
+    "type": "r_markdown",
+    "hash": "1244279686",
+    "contents": "",
+    "dirty": false,
+    "created": 1606057563174.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "cursorPosition": "189,16",
+        "scrollLine": "188",
+        "last_setup_crc32": "1CE8529Bbe0eb67b"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1606100165,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1606100165199,
+    "read_only": false,
+    "read_only_alternatives": []
+}

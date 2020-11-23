@@ -1,0 +1,113 @@
+---
+title: "Credit Risk Modeling"
+author: "Danae Martinez"
+date: "22/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library('dplyr')
+library('tidyr')
+library('ggplot2')
+library('janitor')
+```
+
+## Exploring the credit data
+
+We will be examining the dataset `loan_data`. After being given `loan_data`, you 
+are particularly interested about the defaulted loans in the data set. You want 
+to get an idea of the number, and percentage of defaults. Defaults are rare, so 
+you always want to check what the proportion of defaults is in a loan dataset. 
+The `CrossTable()` function is very useful here.
+
+Remember that default information is stored in the response variable 
+`loan_status`, where 1 represents a default, and 0 represents non-default.
+
+To learn more about variable structures and spot unexpected tendencies in the 
+data, you should examine the relationship between `loan_status` and certain 
+factor variables. For example, you would expect that the proportion of defaults 
+in the group of customers with grade G (worst credit rating score) is 
+substantially higher than the proportion of defaults in the grade A group 
+(best credit rating score).
+
+Conveniently, `CrossTable()` can also be applied on two categorical variables. 
+Let's explore!
+
+```{r }
+
+loan_data <- readRDS('loan_data_ch1.rds')
+head(loan_data)
+
+```
+```{r}
+
+glimpse(loan_data)
+
+```
+
+```{r}
+
+t1 <- loan_data %>% tabyl(loan_status)
+t1 %>%
+  adorn_totals("row") %>%
+  adorn_pct_formatting()
+
+```
+
+```{r}
+
+t2 <- loan_data %>% tabyl(grade, loan_status)
+t2 %>%
+  adorn_percentages("row") %>%
+  adorn_pct_formatting(digits = 2) %>%
+  adorn_ns()
+
+```
+
+
+
+```{r}
+loan_data %>% 
+  select(age) %>% 
+  summarise(min= min(age)
+            , med= median(age)
+            , mean= mean(age)
+            , std = sd(age)
+            , q3 = quantile(age, 0.75)
+            , max=max(age)
+            ,  n=n())
+
+```
+
+```{r}
+
+loan_data %>%  
+  summarise(na_count = sum(is.na(int_rate)))
+
+```
+
+
+```{r}
+
+loan_data <- loan_data %>% 
+  filter(age <= 122) %>% 
+  drop_na(int_rate)
+
+```
+
+## Splitting the data set
+
+```{r}
+set.seed(567)
+#create an ID
+loan_data <- loan_data %>% mutate(id = row_number())
+
+#Create training set
+training_set <- loan_data %>% sample_frac(.70)
+
+#Create test set
+test_set <- anti_join(loan_data, training_set, by = 'id')
+
+```
+

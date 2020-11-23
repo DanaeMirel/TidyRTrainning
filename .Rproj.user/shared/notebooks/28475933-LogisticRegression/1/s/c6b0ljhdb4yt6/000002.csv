@@ -1,0 +1,5 @@
+"0","pred_probs %>%"
+"0","  ggplot(aes(x = annual_inc, y = prob, group = grade, color = grade)) + "
+"0","  geom_line() +"
+"0","  facet_grid(~ ir_cat) + "
+"0","  labs(x = ""Annual income"", y = ""Probability of getting a loan"") "

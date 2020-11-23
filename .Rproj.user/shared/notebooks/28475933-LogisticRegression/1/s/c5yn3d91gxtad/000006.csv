@@ -1,0 +1,7 @@
+"0",""
+"0","cis <- exp(confint(log_model_multi)) %>%"
+"0","  as.data.frame %>%"
+"0","  rownames_to_column(""term"") "
+"2","Waiting for profiling to be done...
+"
+"0","cis"

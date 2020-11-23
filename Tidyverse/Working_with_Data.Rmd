@@ -1,0 +1,439 @@
+---
+title: "Working with Data in the Tidyverse"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::html_docco:
+    highlight: kate
+---
+
+In this course, you'll learn to work with data using tools from the **tidyverse 
+in R**. By data, we mean your own data, other people's data, messy data, big 
+data, small data - any data with rows and columns that comes your way! By work, 
+we mean doing most of the things that sound hard to do with R, and that need to 
+happen before you can analyze or visualize your data. But work doesn't mean 
+that it is not fun - you will see why so many people love working in the 
+tidyverse as you learn how to explore, tame, tidy, and transform your data. 
+Throughout this course, you'll work with data from a popular television baking 
+competition called *"The Great British Bake Off.*"
+
+```{r setup, echo=FALSE, cache=FALSE}
+
+library('knitr')
+library('rmdformats')
+
+## Global options
+options(max.print="75")
+opts_chunk$set(echo=TRUE,
+               cache=TRUE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE)
+opts_knit$set(width=75)
+
+```
+
+# Explore your data
+ 
+## Read a CSV file
+
+In this exercise, you'll use `read_csv()` function. 
+<!-- The first time you will only  -->
+<!-- specify the filename, but you'll notice a problem with the imported data. The  -->
+<!-- second time you'll use a new argument called `skip` to fix the problem.  -->
+Remember to use `?read_csv` to read more about arguments like skip and how to 
+use them.
+
+The data you'll work with is from "The Great British Bake-Off." The file 
+`"bakeoff.csv"` contains data for each episode of the show, organized by series 
+and baker.
+
+```{r}
+
+library('readr')
+url <- 'https://assets.datacamp.com/production/repositories/1613/datasets/53cf6583aa659942b787897319a1ac053cbcfa5a/bakeoff.csv'
+bakeoff <- read_csv(url)
+head(bakeoff)  
+
+```
+
+## Assign missing values
+
+The `read_csv()` function also has an `na` argument, which allows you to specify 
+value(s) that represent missing values in your data. The default values for the 
+`na` argument are `c("", "NA")`, so both are recoded as missing `(NA)` in R. When 
+you read in data, you can add additional values like the string `"UNKNOWN"` to 
+a vector of missing values using the `c()` function to combine multiple values 
+into a single vector.
+
+The `is.na()` function is also helpful for identifying rows with missing values 
+for a variable.
+
+```{r}
+# Load dplyr
+library('dplyr')
+
+# Filter rows where showstopper is NA 
+bakeoff %>%
+filter(is.na(showstopper))
+
+```
+
+## Know your data
+
+## Arrange and glimpse
+
+You can combine `glimpse()` with other functions in a sequence using the pipe 
+`(%>%)` operator. For example, you can use other `dplyr` functions like `arrange` 
+first, then use `glimpse` by adding a line after the final pipe `(%>%)`.
+
+```{r}
+
+bakeoff %>% 
+  arrange(us_airdate) %>% 
+  glimpse()
+
+```
+
+The first episode of the first US season aired on December 28, 2014.
+
+## Summarize your data
+
+You can combine `skim()` with other functions in a sequence using the pipe `(%>%)` 
+operator. For example, you could use other `dplyr` functions like `group_by` 
+first, then use `skim()` by adding a line after the final pipe. 
+ 
+```{r}
+
+# Load skimr
+library('skimr')
+
+# Edit to filter, group by, and skim
+bakeoff %>% 
+  filter(!is.na(us_season)) %>% 
+  group_by(us_season) %>% 
+  skim()
+
+```
+
+Nice piping & skimming! Producing quick grouped summaries with the skim function 
+is a real time (and sanity) saver.
+
+## Know your variable types
+
+How many variables of each type do we have in the `bakeoff` data? You may use any 
+of the data science tools we've learned for getting to know your data. You may 
+also want to try piping a skimmed object to `summary()`, also from the `skimr` 
+package
+
+```{r}
+
+bakeoff %>% 
+  skim() %>%  # no argument needed here
+  summary()   # no argument needed here
+
+```
+
+## Count with your data
+
+## Distinct and count
+
+In every episode of *"The Great British Bake-Off"*, bakers complete 3 challenges 
+and the show's judges award the title *"Star Baker"* to the baker who excelled in 
+that week's challenges (with the exception of the finale). Each baker's result 
+for every episode is stored in `result` is a character variable,  and the value 
+`"SB"` stands for star baker.
+
+```{r}
+
+# Count rows for each result
+bakeoff %>% 
+  distinct(result)
+
+```
+
+
+```{r}
+
+# Count whether or not star baker
+bakeoff %>% 
+  count(result)
+
+```
+
+Adapt your code to count by a logical condition instead: if the result is equal 
+to `"SB"`
+
+```{r}
+
+# Count whether or not star baker
+bakeoff %>% 
+  count(result=='SB')
+
+```
+
+## Count episodes
+
+Recall that `bakeoff` includes each baker's result for every episode. Let's 
+practice counting the number of episodes per series.
+
+```{r}
+
+# Add second count by series
+bakeoff %>% 
+  count(series, episode) 
+  
+```
+
+Remark that this is equivalent to write 
+
+```{r}
+bakeoff %>% 
+  group_by(series, episode) %>% 
+  summarise(n())
+
+```
+
+Adapt your code to add a second `count()` by series again to count the total 
+number of episodes per series.
+
+```{r}
+
+# Add second count by series
+bakeoff %>% 
+  count(series, episode) %>%
+  count(series)
+
+```
+
+Remark that this is equivalent to write
+
+```{r}
+
+bakeoff %>%  
+  group_by(series) %>% 
+  summarise(n()) %>% 
+  ungroup()
+
+```
+
+## Count bakers
+
+Now, using the same data, you'll practice that again, focusing on counting 
+bakers.
+
+
+```{r}
+# Count the number of rows by series and baker
+bakers_by_series <- bakeoff %>% 
+  count(series, baker)
+  
+# Print to view
+bakers_by_series
+
+```
+
+Add a line to `count` the already counted tibble by series again. Which series 
+had the most bakers? Which had the least?
+
+```{r}
+  
+# Count again by series
+bakers_by_series %>% 
+  count(series, sort=TRUE)
+
+```
+Series 4 had the most bakers.
+
+Now count the same tibble by baker again and use `sort = TRUE`. What's the most 
+common baker name?
+
+```{r}
+  
+# Count again by baker
+bakers_by_series %>%
+count(baker, sort=TRUE)
+
+```
+
+Kate is the most popular name. Kates have appeared in 3 different series of the 
+TV show.
+
+## Plot counts
+
+You can learn a lot about your data by counting, but sometimes you can learn 
+even more by plotting counts. This is especially true when you have lots of 
+things to count! With eight series, 74 episodes, and 95 bakers, a plot can be 
+more helpful than a table of numbers. We'll use `ggplot2` to visualize the 
+number of bakers across episodes for each series from bakers.
+
+```{r}
+library('ggplot2')
+
+bakeoff %>% 
+ggplot(aes(x=episode)) + 
+    geom_bar() + 
+    facet_wrap(~series)
+```
+
+
+# Tame your data 
+
+## Cast column types
+
+## Cast a column to a date
+
+A good workflow for parsing dates using `readr` is to, for example:
+
+- Use 
+`parse_date("2012-14-08", format = "%Y-%d-%m")` first, then
+- Use 
+`col_date(format = "%Y-%d-%m")` within `cols()` as the `col_types` argument of 
+`read_csv()`.
+
+In `"desserts.csv"`, the variable `uk_airdate` is formatted like 
+`"17 August 2010"`. Let's parse, then cast this variable!
+ 
+```{r, eval=FALSE}
+
+# Find format to parse uk_airdate 
+parse_date("17 August 2010", format = "%d %B %Y")
+
+# Edit to cast uk_airdate
+desserts <- read_csv("desserts.csv", 
+                     col_types = cols(
+                       uk_airdate = col_date(format = "%d %B %Y")
+                     )
+                    )
+
+# Arrange by descending uk_airdate
+desserts %>% 
+	arrange(desc(uk_airdate))
+
+```
+
+<!-- The output  -->
+
+```{r, eval=FALSE}
+# A tibble: 549 x 16
+   series episode baker technical result uk_airdate us_season us_airdate
+    <dbl>   <dbl> <chr> <chr>     <chr>  <date>         <dbl> <date>    
+ 1      8      10 Kate  3rd       RUNNE~ 2017-10-31        NA NA        
+ 2      8      10 Stev~ 1st       RUNNE~ 2017-10-31        NA NA        
+ 3      8      10 Soph~ 2nd       WINNER 2017-10-31        NA NA        
+ 4      8       9 Kate  4th       IN     2017-10-24        NA NA        
+ 5      8       9 Stev~ 3rd       IN     2017-10-24        NA NA        
+ 6      8       9 Stac~ 2nd       OUT    2017-10-24        NA NA        
+ 7      8       9 Soph~ 1st       SB     2017-10-24        NA NA        
+ 8      8       8 Kate  2nd       IN     2017-10-17        NA NA        
+ 9      8       8 Soph~ 4th       IN     2017-10-17        NA NA        
+10      8       8 Stev~ 1st       IN     2017-10-17        NA NA        
+# ... with 539 more rows, and 8 more variables: showstopper_chocolate <chr>,
+#   showstopper_dessert <chr>, showstopper_fruit <chr>, showstopper_nut <chr>,
+#   signature_chocolate <chr>, signature_dessert <chr>, signature_fruit <chr>,
+#   signature_nut <chr>
+```
+
+## Cast a column to a number
+
+A good workflow for parsing columns using `readr`:
+
+Use `parse_number()` to practice, then
+Use `col_number()` to cast.
+
+But sometimes you'll need to start with casting, then diagnose parsing problems using a new readr function called `problems()`. Using `problems()` on a result of `read_csv()` will show you the rows and columns where parsing error occurred, what the parser expected to find (for example, a number), and the actual value that caused the parsing error.
+
+```{r, eval=FALSE}
+# Try to cast technical as a number
+desserts <- read_csv("desserts.csv", 
+                     col_types = cols(
+           			   uk_airdate = col_date(format = "%d %B %Y"),
+                       technical = col_number()
+                     )
+                    )
+```
+
+<!-- The expected output  -->
+
+```{r, eval=FALSE}
+Warning message: 7 parsing failures.
+row       col expected actual           file
+  4 technical a number    N/A 'desserts.csv'
+  6 technical a number    N/A 'desserts.csv'
+  8 technical a number    N/A 'desserts.csv'
+ 10 technical a number    N/A 'desserts.csv'
+ 34 technical a number    N/A 'desserts.csv'
+... ......... ........ ...... ..............
+See problems(...) for more details.
+```
+
+Pass the desserts tibble to the `problems()` function. Which values were not parsed (take a look at the actual column)?
+
+```{r, eval=FALSE}
+# View parsing problems
+problems(desserts)
+```
+
+```{r, eval=FALSE}
+# A tibble: 7 x 5
+    row col       expected actual file          
+  <int> <chr>     <chr>    <chr>  <chr>         
+1     4 technical a number N/A    'desserts.csv'
+2     6 technical a number N/A    'desserts.csv'
+3     8 technical a number N/A    'desserts.csv'
+4    10 technical a number N/A    'desserts.csv'
+5    34 technical a number N/A    'desserts.csv'
+6    35 technical a number N/A    'desserts.csv'
+7    36 technical a number N/A    'desserts.csv'
+```
+
+To deal with this problem, we can add the `na = c("", "NA", "N/A")` argument to 
+the `read_csv()` function
+
+```{r, eval=FALSE}
+
+# Edit code to fix the parsing error 
+desserts <- read_csv("desserts.csv",
+                      col_types = cols(
+                        uk_airdate = col_date(format = "%d %B %Y"),
+                        technical = col_number()
+                      ),
+                        na = c("", "NA", "N/A") 
+                     )
+```
+
+## Cast a column as a factor
+
+Factors are categorical variables, where the possible values are a fixed and 
+known set. For example, take a simple factor like bake below:
+
+`bake <- c("pie", "cake", "neither")`
+`parse_factor(bake, levels = NULL)`
+
+You can use `parse_factor()` to parse variables and `col_factor()` to cast columns as categorical. Both functions have a levels argument that is used to specify the possible values for the factors. When levels is set to NULL, the possible values will be inferred from the unique values in the dataset. Alternatively, you can pass a list of possible values.
+
+```{r, eval=FALSE}
+# Cast result a factor
+desserts <- read_csv("desserts.csv", 
+                     na = c("", "NA", "N/A"),
+                     col_types = cols(
+                       uk_airdate = col_date(format = "%d %B %Y"),
+                       technical = col_number(),                       
+                       result = col_factor(levels=NULL)
+                     )
+                    )
+                    
+# Glimpse to view
+glimpse(desserts)
+
+```
+
+While it takes a lot of work up front, casting column types when you import can make your analyses easier to reproduce (for yourself too!).
+
+
+
+# Tidy your data
+
+# Transform your data
+

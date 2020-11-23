@@ -1,0 +1,178 @@
+---
+title: "Categorical Data in the Tidyverse"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::html_clean:
+    highlight: kate
+---
+
+```{r setup, echo=FALSE, cache=FALSE}
+
+library('knitr')
+library('rmdformats')
+
+## Global options
+options(max.print="75")
+opts_chunk$set(#echo=FALSE,
+	             cache=TRUE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               #eval=FALSE,
+               warning=FALSE)
+opts_knit$set(width=75)
+
+```
+
+# Introduction to Factor Variables
+
+## Recognizing factor variables
+
+There are two ways R can represent qualitative variables: as factors or as 
+characters. In this exercise, you'll try the two methods to find if 
+`CurrentJobTitleSelect` is a factor. The dataset `multiple_choice_responses` 
+has been loaded for you.
+
+```{r}
+
+library('readr')
+
+multiple_choice_responses <- read_csv('DataScience_Survey_Data/multipleChoiceResponses.csv')
+
+# Print out the dataset
+head(multiple_choice_responses) 
+
+# Check if CurrentJobTitleSelect is a factor
+is.factor(multiple_choice_responses$CurrentJobTitleSelect)
+
+```
+
+## Understanding your qualitative variables
+
+## Getting number of levels
+`mutate()` and `summarise()` in dplyr both have variants where you can add the 
+suffix `if` or all to change the operation. `mutate_if()` and `summarise_if` 
+apply their second argument, a function, to all columns where the first argument 
+is t`rue`, and `mutate_all()` and `summarise_all()` take one argument, a 
+function, and apply it to all columns.
+
+We'll use these along with `tidyr` to get the number of levels for each factor 
+variable in `multiple_choice_responses`. `gather()` from tidyr takes a dataset 
+from wide to long format. Its two arguments are the new column names - one 
+contain the old column names and one all the values.
+
+```{r}
+
+library('formatR')
+library('dplyr')
+library('tidyr')
+
+# Change all the character columns to factors
+responses_as_factors <- multiple_choice_responses %>%
+    mutate_if(is.character, as.factor)
+
+number_of_levels <- responses_as_factors %>%
+	# apply the function nlevels to each column
+    summarise_all(nlevels) %>%
+    # change the dataset from wide to long
+    gather(variable, num_levels)
+
+```
+
+There are more handy functions, `summarise_at()` and `mutate_at()`. These let 
+you select columns by name-based select helpers.
+
+## Examining number of levels
+
+`dplyr` has two other functions that can come in handy when exploring a dataset. 
+The first is `top_n(x, var)`, which gets us the first x rows of a dataset based 
+on the value of var. The other is `pull()`, which allows us to extract a column 
+and take out the name, leaving only the value(s) from the column.
+
+```{r}
+
+# Select the 3 rows with the highest number of levels
+number_of_levels %>%
+    top_n(3, num_levels)
+    
+number_of_levels %>%
+	# filter for where the column called variable equals CurrentJobTitleSelect
+    filter(variable=='CurrentJobTitleSelect') %>%
+	# pull num_levels
+    pull(num_levels)
+
+```
+
+## Examining levels
+
+Let's continue to build our understanding of `CurrentJobTitleSelect`. In the 
+previous exercise, we were able to get how many levels it has, but the other 
+important part is what those levels are. Just like the last exercise, we'll use 
+`pull` to get the values of `CurrentJobTitleSelect` from the dataset 
+`responses_as_factors`. `pull` can be used interchangeably with `$` as a way 
+to extract a column as a vector from a table. For example, `mean(mtcars$mpg)` 
+is the same as `mean(mtcars %>% pull(mpg))` or `mtcars %>% pull(mpg) %>% mean()`.
+
+```{r}
+responses_as_factors %>%
+    # pull CurrentJobTitleSelect
+    pull(CurrentJobTitleSelect) %>%
+    # get the values of the levels
+    levels()
+```
+
+## Reordering a variable by its frequency
+
+Making effective visualizations is a big part of analyzing data. It's not about 
+having all the information on the plot; how you display the information can 
+change whether or how quickly someone can understand the message. One of the 
+primary purposes of the `forcats` package is to make it easy to quickly change 
+your visualizations when you're working with qualitative variables.
+
+Let's make a chart of how many people are employed in each industry. We'll do 
+two versions so you can judge which one is better. `multiple_choice_responses` 
+has been loaded for you.
+
+```{r}
+library('forcats')
+library('ggplot2')
+# Make a bar plot
+ggplot(multiple_choice_responses, aes(x=fct_rev(fct_infreq(EmployerIndustry)))) + 
+    geom_bar() + 
+    # flip the coordinates
+    coord_flip()
+
+```
+
+## Ordering one variable by another
+
+Often we'll need to modify our dataset before we can plot it. If we do this with 
+`dplyr` functions and the pipe, `%>%`, you can continue by `%>%` your dataset 
+into `ggplot()`. It works just like all the functions you use the `%>%` for 
+because data is the first argument `ggplot()` takes, and then you can write the 
+rest of the arguments (like `aes()`) inside the `ggplot()` call. Just don't 
+forget you have to switch back to `+` when you add on the rest of the `ggplot()` 
+code!
+
+Let's try it out by first modifying `multiple_choice_responses` and then 
+plotting the results in a scatterplot. We'll also need a `forcats` function to 
+put our graph in a better order.
+
+```{r}
+
+multiple_choice_responses %>%
+  # remove NAs
+  filter(!is.na(EmployerIndustry) & !is.na(Age)) %>%
+  # get mean_age by EmployerIndustry
+  group_by(EmployerIndustry) %>%
+  summarise(mean_age = mean(Age)) %>%
+  # reorder EmployerIndustry by mean_age 
+  mutate(EmployerIndustry = fct_reorder(EmployerIndustry, mean_age)) %>%
+  # make a scatterplot of EmployerIndustry by mean_age
+  ggplot(aes(x = EmployerIndustry, y = mean_age)) + 
+    geom_point() + 
+    coord_flip()
+
+```
+

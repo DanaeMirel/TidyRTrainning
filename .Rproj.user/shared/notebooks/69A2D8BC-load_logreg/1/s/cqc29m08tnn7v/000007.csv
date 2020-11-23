@@ -1,0 +1,3 @@
+"0",""
+"0","loan_data <- readRDS('loan_data_ch1.rds')"
+"0","head(loan_data)"
